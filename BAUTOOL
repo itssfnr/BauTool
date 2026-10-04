@@ -1,0 +1,449 @@
+--// ALL-IN-ONE TOOL GUI
+--// Für dein eigenes Roblox-Spiel
+--// LocalScript -> StarterPlayer > StarterPlayerScripts
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local backpack = player:WaitForChild("Backpack")
+
+--==================================================
+-- GUI
+--==================================================
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "ToolMenu"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local main = Instance.new("Frame")
+main.Size = UDim2.fromOffset(330, 430)
+main.Position = UDim2.new(0, 25, 0.5, -215)
+main.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+main.BorderSizePixel = 0
+main.Parent = gui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 14)
+corner.Parent = main
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 55)
+title.BackgroundTransparency = 1
+title.Text = "🛠️ TOOL MENU"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.TextSize = 24
+title.Font = Enum.Font.GothamBold
+title.Parent = main
+
+local list = Instance.new("ScrollingFrame")
+list.Size = UDim2.new(1, -20, 1, -70)
+list.Position = UDim2.fromOffset(10, 60)
+list.BackgroundTransparency = 1
+list.BorderSizePixel = 0
+list.ScrollBarThickness = 5
+list.Parent = main
+
+local layout = Instance.new("UIListLayout")
+layout.Padding = UDim.new(0, 8)
+layout.Parent = list
+
+--==================================================
+-- BUTTON
+--==================================================
+
+local function button(text, callback)
+	local b = Instance.new("TextButton")
+	b.Size = UDim2.new(1, -10, 0, 42)
+	b.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+	b.TextColor3 = Color3.new(1, 1, 1)
+	b.Text = text
+	b.TextSize = 16
+	b.Font = Enum.Font.GothamSemibold
+	b.AutoButtonColor = true
+	b.Parent = list
+
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 9)
+	c.Parent = b
+
+	b.MouseButton1Click:Connect(callback)
+
+	return b
+end
+
+--==================================================
+-- CHARACTER
+--==================================================
+
+local function character()
+	return player.Character or player.CharacterAdded:Wait()
+end
+
+local function humanoid()
+	return character():FindFirstChildOfClass("Humanoid")
+end
+
+local function root()
+	return character():FindFirstChild("HumanoidRootPart")
+end
+
+--==================================================
+-- SPEED
+--==================================================
+
+button("⚡ Speed", function()
+	local h = humanoid()
+
+	if h then
+		h.WalkSpeed = 50
+	end
+end)
+
+button("🏃 Normal Speed", function()
+	local h = humanoid()
+
+	if h then
+		h.WalkSpeed = 16
+	end
+end)
+
+--==================================================
+-- SUPER JUMP
+--==================================================
+
+button("🦘 Super Jump", function()
+	local h = humanoid()
+
+	if h then
+		h.UseJumpPower = true
+		h.JumpPower = 100
+	end
+end)
+
+button("🦘 Normal Jump", function()
+	local h = humanoid()
+
+	if h then
+		h.UseJumpPower = true
+		h.JumpPower = 50
+	end
+end)
+
+--==================================================
+-- FLYING CARPET
+--==================================================
+
+local flying = false
+local flyConnection
+
+button("🪄 Flying Carpet", function()
+	local r = root()
+
+	if not r then
+		return
+	end
+
+	flying = not flying
+
+	if not flying then
+		if flyConnection then
+			flyConnection:Disconnect()
+			flyConnection = nil
+		end
+
+		return
+	end
+
+	flyConnection = RunService.RenderStepped:Connect(function()
+		if not flying then
+			return
+		end
+
+		local cam = workspace.CurrentCamera
+		local direction = Vector3.zero
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+			direction += cam.CFrame.LookVector
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+			direction -= cam.CFrame.LookVector
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+			direction -= cam.CFrame.RightVector
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+			direction += cam.CFrame.RightVector
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+			direction += Vector3.yAxis
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+			direction -= Vector3.yAxis
+		end
+
+		if direction.Magnitude > 0 then
+			r.AssemblyLinearVelocity = direction.Unit * 70
+		else
+			r.AssemblyLinearVelocity = Vector3.zero
+		end
+	end)
+end)
+
+--==================================================
+-- LOCAL SWORD
+--==================================================
+
+local function createSword()
+	local tool = Instance.new("Tool")
+	tool.Name = "Sword"
+	tool.RequiresHandle = true
+	tool.CanBeDropped = false
+
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.4, 4, 0.4)
+	handle.Color = Color3.fromRGB(180, 180, 190)
+	handle.Material = Enum.Material.Metal
+	handle.Parent = tool
+
+	tool.Activated:Connect(function()
+		local r = root()
+
+		if not r then
+			return
+		end
+
+		for _, obj in ipairs(workspace:GetDescendants()) do
+			local h = obj:FindFirstChildOfClass("Humanoid")
+
+			if h and h ~= humanoid() then
+				local hrp = obj:FindFirstChild("HumanoidRootPart")
+
+				if hrp and (hrp.Position - r.Position).Magnitude < 8 then
+					h:TakeDamage(25)
+				end
+			end
+		end
+	end)
+
+	tool.Parent = backpack
+end
+
+button("⚔️ Give Sword", createSword)
+
+--==================================================
+-- LOCAL BLASTER
+--==================================================
+
+local function createBlaster()
+	local tool = Instance.new("Tool")
+	tool.Name = "Blaster"
+	tool.RequiresHandle = true
+	tool.CanBeDropped = false
+
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(1, 1, 2)
+	handle.Color = Color3.fromRGB(50, 150, 255)
+	handle.Material = Enum.Material.Neon
+	handle.Parent = tool
+
+	tool.Activated:Connect(function()
+		local cam = workspace.CurrentCamera
+
+		local ray = workspace:Raycast(
+			cam.CFrame.Position,
+			cam.CFrame.LookVector * 500
+		)
+
+		if ray then
+			local hit = ray.Instance
+			local model = hit:FindFirstAncestorOfClass("Model")
+
+			if model then
+				local h = model:FindFirstChildOfClass("Humanoid")
+
+				if h and h ~= humanoid() then
+					h:TakeDamage(15)
+				end
+			end
+		end
+	end)
+
+	tool.Parent = backpack
+end
+
+button("🔫 Give Blaster", createBlaster)
+
+--==================================================
+-- GRAPPLING HOOK
+--==================================================
+
+local function createGrapple()
+	local tool = Instance.new("Tool")
+	tool.Name = "Grappling Hook"
+	tool.RequiresHandle = true
+	tool.CanBeDropped = false
+
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(1, 1, 1)
+	handle.Color = Color3.fromRGB(255, 170, 0)
+	handle.Parent = tool
+
+	tool.Activated:Connect(function()
+		local r = root()
+		local cam = workspace.CurrentCamera
+
+		if not r then
+			return
+		end
+
+		local ray = workspace:Raycast(
+			cam.CFrame.Position,
+			cam.CFrame.LookVector * 300
+		)
+
+		if ray then
+			local difference = ray.Position - r.Position
+
+			if difference.Magnitude > 5 then
+				r.AssemblyLinearVelocity =
+					difference.Unit * 100
+			end
+		end
+	end)
+
+	tool.Parent = backpack
+end
+
+button("🪝 Grappling Hook", createGrapple)
+
+--==================================================
+-- BUILD TOOL
+--==================================================
+
+local buildMode = false
+local mouse = player:GetMouse()
+
+button("🔨 Build Mode", function()
+	buildMode = not buildMode
+end)
+
+mouse.Button1Down:Connect(function()
+	if not buildMode then
+		return
+	end
+
+	local hit = mouse.Hit
+
+	local block = Instance.new("Part")
+	block.Name = "PlayerBlock"
+	block.Size = Vector3.new(4, 4, 4)
+	block.Position = hit.Position + Vector3.new(0, 2, 0)
+	block.Anchored = true
+	block.Material = Enum.Material.Plastic
+	block.Color = Color3.fromRGB(
+		math.random(50, 255),
+		math.random(50, 255),
+		math.random(50, 255)
+	)
+
+	block.Parent = workspace
+end)
+
+--==================================================
+-- DELETE TOOL
+--==================================================
+
+local deleteMode = false
+
+button("🗑️ Delete Mode", function()
+	deleteMode = not deleteMode
+	buildMode = false
+end)
+
+mouse.Button1Down:Connect(function()
+	if not deleteMode then
+		return
+	end
+
+	local target = mouse.Target
+
+	if target and target.Name == "PlayerBlock" then
+		target:Destroy()
+	end
+end)
+
+--==================================================
+-- GUI TOGGLE
+--==================================================
+
+local toggle = Instance.new("TextButton")
+toggle.Size = UDim2.fromOffset(55, 55)
+toggle.Position = UDim2.new(0, 15, 0.5, -280)
+toggle.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+toggle.Text = "🛠️"
+toggle.TextSize = 25
+toggle.Parent = gui
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(1, 0)
+toggleCorner.Parent = toggle
+
+toggle.MouseButton1Click:Connect(function()
+	main.Visible = not main.Visible
+end)
+
+--==================================================
+-- DRAG GUI
+--==================================================
+
+local dragging = false
+local dragStart
+local startPos
+
+title.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+
+		dragging = true
+		dragStart = input.Position
+		startPos = main.Position
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if not dragging then
+		return
+	end
+
+	if input.UserInputType == Enum.UserInputType.MouseMovement
+		or input.UserInputType == Enum.UserInputType.Touch then
+
+		local delta = input.Position - dragStart
+
+		main.Position = UDim2.new(
+			startPos.X.Scale,
+			startPos.X.Offset + delta.X,
+			startPos.Y.Scale,
+			startPos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+
+		dragging = false
+	end
+end)
