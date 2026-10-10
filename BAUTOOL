@@ -1,253 +1,387 @@
 
--- Egg Hub V1 | Original GUI
--- LocalScript in StarterPlayerScripts
+-- EGG HUB V2 | Single LocalScript
+-- StarterPlayer > StarterPlayerScripts
 
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
+local CollectionService = game:GetService("CollectionService")
+local UserInputService = game:GetService("UserInputService")
+
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local GREEN = Color3.fromRGB(85, 255, 150)
+local BG = Color3.fromRGB(17, 20, 26)
+local PANEL = Color3.fromRGB(28, 32, 40)
+local WHITE = Color3.fromRGB(245, 247, 250)
+local GRAY = Color3.fromRGB(155, 165, 180)
+
+local state = {
+    autoFarm = false,
+    espEggs = false,
+    espCollectibles = false,
+    autoHatch = false,
+}
+
+local espObjects = {}
+local pets = {}
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "EggHub"
+gui.Name = "EggHubV2"
 gui.ResetOnSpawn = false
 gui.DisplayOrder = 100
-gui.Parent = player:WaitForChild("PlayerGui")
-
-local green = Color3.fromRGB(90, 255, 145)
-local bg = Color3.fromRGB(18, 20, 25)
-local panel = Color3.fromRGB(27, 30, 37)
-local white = Color3.fromRGB(240, 244, 250)
-local muted = Color3.fromRGB(155, 165, 180)
+gui.Parent = playerGui
 
 local main = Instance.new("Frame")
-main.Size = UDim2.fromOffset(530, 350)
-main.Position = UDim2.new(0.5, -265, 0.5, -175)
-main.BackgroundColor3 = bg
+main.Size = UDim2.fromOffset(550, 390)
+main.Position = UDim2.new(0.5, -275, 0.5, -195)
+main.BackgroundColor3 = BG
 main.BorderSizePixel = 0
 main.Parent = gui
 
 Instance.new("UICorner", main).CornerRadius = UDim.new(0, 12)
 
-local stroke = Instance.new("UIStroke", main)
-stroke.Color = green
-stroke.Thickness = 1.4
-stroke.Transparency = 0.2
+local outline = Instance.new("UIStroke", main)
+outline.Color = GREEN
+outline.Thickness = 1.5
 
-local function label(parent, text, size, position, color)
-    local obj = Instance.new("TextLabel")
-    obj.BackgroundTransparency = 1
-    obj.Text = text
-    obj.TextSize = size
-    obj.Font = Enum.Font.GothamMedium
-    obj.TextColor3 = color or white
-    obj.Position = position
-    obj.Size = UDim2.new(1, 0, 0, 28)
+local function create(class, props, parent)
+    local obj = Instance.new(class)
+    for k, v in pairs(props) do
+        obj[k] = v
+    end
     obj.Parent = parent
     return obj
 end
 
-local header = Instance.new("Frame")
-header.Size = UDim2.new(1, 0, 0, 54)
-header.BackgroundColor3 = panel
-header.BorderSizePixel = 0
-header.Parent = main
+local header = create("Frame", {
+    Size = UDim2.new(1, 0, 0, 55),
+    BackgroundColor3 = PANEL,
+    BorderSizePixel = 0,
+}, main)
+
 Instance.new("UICorner", header).CornerRadius = UDim.new(0, 12)
 
-label(header, "🥚  EGG HUB", 21, UDim2.fromOffset(16, 7), green)
-label(header, "V1.0  •  PERSONAL HUB", 10,
-    UDim2.fromOffset(18, 29), muted)
+create("TextLabel", {
+    Size = UDim2.new(1, -100, 1, 0),
+    Position = UDim2.fromOffset(16, 0),
+    BackgroundTransparency = 1,
+    Text = "🥚  EGG HUB  V2",
+    TextColor3 = GREEN,
+    Font = Enum.Font.GothamBold,
+    TextSize = 21,
+    TextXAlignment = Enum.TextXAlignment.Left,
+}, header)
 
-local close = Instance.new("TextButton")
-close.Size = UDim2.fromOffset(34, 30)
-close.Position = UDim2.new(1, -44, 0, 12)
-close.BackgroundColor3 = Color3.fromRGB(170, 55, 65)
-close.Text = "X"
-close.TextColor3 = white
-close.TextSize = 15
-close.Font = Enum.Font.GothamBold
-close.Parent = header
+local close = create("TextButton", {
+    Size = UDim2.fromOffset(35, 32),
+    Position = UDim2.new(1, -45, 0, 11),
+    BackgroundColor3 = Color3.fromRGB(175, 55, 65),
+    Text = "X",
+    TextColor3 = WHITE,
+    Font = Enum.Font.GothamBold,
+    TextSize = 16,
+}, header)
 Instance.new("UICorner", close).CornerRadius = UDim.new(0, 7)
 
-close.MouseButton1Click:Connect(function()
+close.Activated:Connect(function()
     gui:Destroy()
 end)
 
--- Bewegliches Fenster
-local dragging, dragStart, startPos
+-- Drag window
+local dragging, dragStart, startPosition
 
 header.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
-        startPos = main.Position
+        startPosition = main.Position
     end
 end)
 
-header.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
-    end
-end)
-
-game:GetService("UserInputService").InputChanged:Connect(function(input)
+UserInputService.InputChanged:Connect(function(input)
     if dragging and (
         input.UserInputType == Enum.UserInputType.MouseMovement
         or input.UserInputType == Enum.UserInputType.Touch
     ) then
         local delta = input.Position - dragStart
         main.Position = UDim2.new(
-            startPos.X.Scale, startPos.X.Offset + delta.X,
-            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            startPosition.X.Scale,
+            startPosition.X.Offset + delta.X,
+            startPosition.Y.Scale,
+            startPosition.Y.Offset + delta.Y
         )
     end
 end)
 
-local sidebar = Instance.new("Frame")
-sidebar.Position = UDim2.fromOffset(12, 67)
-sidebar.Size = UDim2.fromOffset(135, 270)
-sidebar.BackgroundColor3 = panel
-sidebar.BorderSizePixel = 0
-sidebar.Parent = main
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+local sidebar = create("Frame", {
+    Position = UDim2.fromOffset(12, 68),
+    Size = UDim2.fromOffset(145, 310),
+    BackgroundColor3 = PANEL,
+    BorderSizePixel = 0,
+}, main)
 Instance.new("UICorner", sidebar).CornerRadius = UDim.new(0, 8)
 
-local content = Instance.new("Frame")
-content.Position = UDim2.fromOffset(158, 67)
-content.Size = UDim2.new(1, -170, 1, -80)
-content.BackgroundTransparency = 1
-content.Parent = main
+local content = create("ScrollingFrame", {
+    Position = UDim2.fromOffset(168, 68),
+    Size = UDim2.new(1, -180, 1, -82),
+    BackgroundColor3 = PANEL,
+    BorderSizePixel = 0,
+    ScrollBarThickness = 4,
+    ScrollBarImageColor3 = GREEN,
+    CanvasSize = UDim2.new(),
+    AutomaticCanvasSize = Enum.AutomaticSize.Y,
+}, main)
+Instance.new("UICorner", content).CornerRadius = UDim.new(0, 8)
+
+create("UIPadding", {
+    PaddingTop = UDim.new(0, 10),
+    PaddingBottom = UDim.new(0, 10),
+    PaddingLeft = UDim.new(0, 10),
+    PaddingRight = UDim.new(0, 10),
+}, content)
+
+create("UIListLayout", {
+    Padding = UDim.new(0, 8),
+    SortOrder = Enum.SortOrder.LayoutOrder,
+}, content)
 
 local function clearContent()
     for _, child in ipairs(content:GetChildren()) do
-        child:Destroy()
+        if not child:IsA("UIPadding")
+            and not child:IsA("UIListLayout") then
+            child:Destroy()
+        end
     end
 end
 
-local function makeButton(parent, text, y, callback)
-    local b = Instance.new("TextButton")
-    b.Position = UDim2.fromOffset(10, y)
-    b.Size = UDim2.new(1, -20, 0, 36)
-    b.BackgroundColor3 = panel
-    b.Text = text
-    b.TextColor3 = white
-    b.TextSize = 13
-    b.Font = Enum.Font.GothamMedium
-    b.Parent = parent
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 7)
-
-    b.MouseButton1Click:Connect(callback)
-    b.MouseEnter:Connect(function()
-        TweenService:Create(b, TweenInfo.new(0.12), {
-            BackgroundColor3 = Color3.fromRGB(48, 58, 52)
-        }):Play()
-    end)
-    b.MouseLeave:Connect(function()
-        TweenService:Create(b, TweenInfo.new(0.12), {
-            BackgroundColor3 = panel
-        }):Play()
-    end)
-    return b
+local function textLabel(text, height)
+    return create("TextLabel", {
+        Size = UDim2.new(1, 0, 0, height or 35),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = WHITE,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 14,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, content)
 end
 
-local function showHome()
-    clearContent()
-    label(content, "Welcome back!", 22, UDim2.fromOffset(8, 8), green)
-    label(content, "Your personal Egg Hub.", 13,
-        UDim2.fromOffset(8, 40), muted)
+local function actionButton(text, callback)
+    local button = create("TextButton", {
+        Size = UDim2.new(1, 0, 0, 38),
+        BackgroundColor3 = BG,
+        Text = text,
+        TextColor3 = WHITE,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 13,
+        TextWrapped = true,
+    }, content)
 
-    local info = Instance.new("TextLabel")
-    info.Position = UDim2.fromOffset(8, 85)
-    info.Size = UDim2.new(1, -16, 0, 90)
-    info.BackgroundColor3 = panel
-    info.TextColor3 = white
-    info.TextSize = 14
-    info.Font = Enum.Font.Gotham
-    info.TextWrapped = true
-    info.Text = "Hub status: Ready\nPlayer: " .. player.Name ..
-        "\nVersion: 1.0"
-    info.Parent = content
-    Instance.new("UICorner", info).CornerRadius = UDim.new(0, 8)
-
-    label(content, "Choose a section on the left.", 12,
-        UDim2.fromOffset(8, 190), muted)
+    Instance.new("UICorner", button).CornerRadius = UDim.new(0, 7)
+    button.Activated:Connect(callback)
+    return button
 end
 
-local function showPlayer()
-    clearContent()
-    label(content, "PLAYER INFO", 20, UDim2.fromOffset(8, 8), green)
-
-    local function refresh()
-        for _, c in ipairs(content:GetChildren()) do
-            if c.Name == "PlayerData" then c:Destroy() end
-        end
-
-        local character = player.Character
-        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-        local root = character and character:FindFirstChild("HumanoidRootPart")
-
-        local data = Instance.new("TextLabel")
-        data.Name = "PlayerData"
-        data.Position = UDim2.fromOffset(8, 48)
-        data.Size = UDim2.new(1, -16, 0, 115)
-        data.BackgroundColor3 = panel
-        data.TextColor3 = white
-        data.TextSize = 14
-        data.Font = Enum.Font.Gotham
-        data.TextWrapped = true
-        data.TextXAlignment = Enum.TextXAlignment.Left
-        data.Text = "  Name: " .. player.Name ..
-            "\n  User ID: " .. player.UserId ..
-            "\n  Health: " .. (humanoid and math.floor(humanoid.Health) or 0) ..
-            "\n  WalkSpeed: " .. (humanoid and humanoid.WalkSpeed or 0) ..
-            "\n  Position: " .. (root and tostring(root.Position:ToVector3()) or "N/A")
-        data.Parent = content
-        Instance.new("UICorner", data).CornerRadius = UDim.new(0, 8)
+local function toggleButton(title, key, callback)
+    local button
+    local function update()
+        button.Text = title .. ": " .. (state[key] and "ON" or "OFF")
+        button.TextColor3 = state[key] and GREEN or WHITE
     end
 
-    makeButton(content, "Refresh player info", 180, refresh)
-    refresh()
+    button = actionButton(title, function()
+        state[key] = not state[key]
+        update()
+        if callback then callback(state[key]) end
+    end)
+    update()
 end
 
-local function showSettings()
+-- ESP: highlight tagged objects locally
+local function clearESP(tag)
+    for obj, entry in pairs(espObjects) do
+        if entry.tag == tag then
+            if entry.highlight then entry.highlight:Destroy() end
+            if entry.billboard then entry.billboard:Destroy() end
+            espObjects[obj] = nil
+        end
+    end
+end
+
+local function updateESP(tag, enabled, color)
+    clearESP(tag)
+    if not enabled then return end
+
+    for _, obj in ipairs(CollectionService:GetTagged(tag)) do
+        if obj:IsDescendantOf(workspace) then
+            local target = obj:IsA("Model") and
+                (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true))
+                or (obj:IsA("BasePart") and obj)
+
+            if target then
+                local highlight = Instance.new("Highlight")
+                highlight.FillColor = color
+                highlight.OutlineColor = WHITE
+                highlight.FillTransparency = 0.55
+                highlight.Adornee = obj
+                highlight.Parent = gui
+
+                local billboard = Instance.new("BillboardGui")
+                billboard.Size = UDim2.fromOffset(140, 30)
+                billboard.StudsOffset = Vector3.new(0, 3, 0)
+                billboard.AlwaysOnTop = true
+                billboard.Adornee = target
+                billboard.Parent = gui
+
+                create("TextLabel", {
+                    Size = UDim2.fromScale(1, 1),
+                    BackgroundTransparency = 1,
+                    Text = obj.Name,
+                    TextColor3 = color,
+                    TextStrokeTransparency = 0.25,
+                    Font = Enum.Font.GothamBold,
+                    TextSize = 13,
+                }, billboard)
+
+                espObjects[obj] = {
+                    highlight = highlight,
+                    billboard = billboard,
+                    tag = tag,
+                }
+            end
+        end
+    end
+end
+
+local function homeTab()
     clearContent()
-    label(content, "SETTINGS", 20, UDim2.fromOffset(8, 8), green)
-    label(content, "Customize your interface.", 13,
-        UDim2.fromOffset(8, 38), muted)
+    textLabel("Welcome, " .. player.DisplayName, 30)
+    textLabel("Egg Hub V2 • Personal game tools", 26)
+    textLabel("Local UI: ready", 25)
 
-    makeButton(content, "Hide / Show Hub", 80, function()
-        main.Visible = false
-
-        local reopen = Instance.new("TextButton")
-        reopen.Size = UDim2.fromOffset(120, 40)
-        reopen.Position = UDim2.new(0, 20, 0.5, 0)
-        reopen.BackgroundColor3 = bg
-        reopen.TextColor3 = green
-        reopen.Text = "Open Egg Hub"
-        reopen.TextSize = 14
-        reopen.Parent = gui
-        Instance.new("UICorner", reopen).CornerRadius = UDim.new(0, 8)
-
-        reopen.MouseButton1Click:Connect(function()
-            main.Visible = true
-            reopen:Destroy()
-        end)
+    actionButton("Refresh player information", function()
+        homeTab()
     end)
 
-    makeButton(content, "Green / Blue Theme", 128, function()
-        if stroke.Color == green then
-            stroke.Color = Color3.fromRGB(80, 170, 255)
-        else
-            stroke.Color = green
+    actionButton("Recenter window", function()
+        main.Position = UDim2.new(0.5, -275, 0.5, -195)
+    end)
+end
+
+local function eggTab()
+    clearContent()
+    textLabel("🥚 EGG SYSTEM", 30)
+    textLabel("Eggs are detected by the 'Egg' tag.", 35)
+
+    toggleButton("Auto Hatch (UI demo)", "autoHatch", function(enabled)
+        textLabel(enabled and
+            "Auto Hatch enabled in UI." or "Auto Hatch disabled.", 30)
+    end)
+
+    actionButton("List nearby eggs", function()
+        local count = 0
+        for _, egg in ipairs(CollectionService:GetTagged("Egg")) do
+            if egg:IsDescendantOf(workspace) then
+                count += 1
+                textLabel("🥚 " .. egg.Name, 26)
+            end
+        end
+        if count == 0 then
+            textLabel("No objects tagged 'Egg' found.", 35)
         end
     end)
 
-    makeButton(content, "Reset Window Position", 176, function()
-        main.Position = UDim2.new(0.5, -265, 0.5, -175)
+    actionButton("Request hatch (preview only)", function()
+        textLabel("Connect this button to your own server hatch system.", 45)
     end)
 end
 
-makeButton(sidebar, "⌂  Home", 12, showHome)
-makeButton(sidebar, "◉  Player Info", 56, showPlayer)
-makeButton(sidebar, "⚙  Settings", 100, showSettings)
+local function petTab()
+    clearContent()
+    textLabel("🐾 PET MANAGER", 30)
+    textLabel("Client-side preview list", 25)
 
-showHome()
+    if #pets == 0 then
+        textLabel("No pets loaded. Connect your game's pet data.", 45)
+    else
+        for _, pet in ipairs(pets) do
+            textLabel("🐾 " .. tostring(pet), 28)
+        end
+    end
+
+    actionButton("Refresh pet preview", function()
+        petTab()
+    end)
+end
+
+local function farmTab()
+    clearContent()
+    textLabel("⚡ AUTO FARM", 30)
+    textLabel("Works with your own game's tagged collectibles.", 40)
+
+    toggleButton("Auto Farm (local preview)", "autoFarm", function(enabled)
+        textLabel(enabled and
+            "Enabled: searching for collectibles." or
+            "Auto Farm disabled.", 35)
+    end)
+
+    actionButton("Count collectibles", function()
+        local count = #CollectionService:GetTagged("Collectible")
+        textLabel("Collectibles found: " .. count, 30)
+    end)
+
+    textLabel("Actual rewards require server-side validation.", 40)
+end
+
+local function espTab()
+    clearContent()
+    textLabel("👁 ESP / RADAR", 30)
+
+    toggleButton("Egg ESP", "espEggs", function(enabled)
+        updateESP("Egg", enabled, GREEN)
+    end)
+
+    toggleButton("Collectible ESP", "espCollectibles", function(enabled)
+        updateESP("Collectible", enabled, Color3.fromRGB(80, 180, 255))
+    end)
+
+    actionButton("Clear all ESP", function()
+        state.espEggs = false
+        state.espCollectibles = false
+        clearESP("Egg")
+        clearESP("Collectible")
+        espTab()
+    end)
+end
+
+local function addTab(name, callback, order)
+    local button = create("TextButton", {
+        Position = UDim2.fromOffset(8, 10 + (order - 1) * 45),
+        Size = UDim2.new(1, -16, 0, 37),
+        BackgroundColor3 = BG,
+        Text = name,
+        TextColor3 = WHITE,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 13,
+    }, sidebar)
+
+    Instance.new("UICorner", button).CornerRadius = UDim.new(0, 7)
+    button.Activated:Connect(callback)
+end
+
+addTab("⌂  Home", homeTab, 1)
+addTab("🥚  Eggs", eggTab, 2)
+addTab("🐾  Pets", petTab, 3)
+addTab("⚡  Auto Farm", farmTab, 4)
+addTab("👁  ESP", espTab, 5)
+
+homeTab()
