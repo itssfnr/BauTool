@@ -1,14 +1,16 @@
 
 -- LocalScript
--- Einfügen in StarterPlayer > StarterPlayerScripts
+-- StarterPlayer > StarterPlayerScripts
 
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
-local flying = false
 local speedEnabled = false
+local flyTestEnabled = false
 local flyConnection
+local dragConnection
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "MovementTestGUI"
@@ -16,84 +18,143 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.fromOffset(240, 190)
-frame.Position = UDim2.new(0, 20, 0.5, -95)
+frame.Name = "MainFrame"
+frame.Size = UDim2.fromOffset(260, 210)
+frame.Position = UDim2.new(0.5, -130, 0.5, -105)
 frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+frame.BorderSizePixel = 0
+frame.Active = true
 frame.Parent = gui
 
-Instance.new("UICorner", frame).CornerRadius =
-    UDim.new(0, 12)
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = frame
 
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 40)
-title.BackgroundTransparency = 1
-title.Text = "Movement Test"
-title.TextColor3 = Color3.new(1, 1, 1)
-title.TextScaled = true
-title.Parent = frame
+-- Titelleiste zum Ziehen
+local titleBar = Instance.new("TextButton")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, 42)
+titleBar.BackgroundColor3 = Color3.fromRGB(45, 55, 90)
+titleBar.BorderSizePixel = 0
+titleBar.Text = "Movement Test  |  Ziehen"
+titleBar.TextColor3 = Color3.new(1, 1, 1)
+titleBar.TextSize = 16
+titleBar.Font = Enum.Font.GothamBold
+titleBar.Active = true
+titleBar.Parent = frame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 12)
+titleCorner.Parent = titleBar
+
+-- GUI mit der Maus verschieben
+local dragging = false
+local dragStart
+local startPosition
+local activeInput
+
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPosition = frame.Position
+        activeInput = input
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+                activeInput = nil
+            end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if not dragging then return end
+
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        local delta = input.Position - dragStart
+
+        frame.Position = UDim2.new(
+            startPosition.X.Scale,
+            startPosition.X.Offset + delta.X,
+            startPosition.Y.Scale,
+            startPosition.Y.Offset + delta.Y
+        )
+    end
+end)
 
 local function makeButton(text, y, callback)
     local button = Instance.new("TextButton")
     button.Size = UDim2.new(1, -20, 0, 38)
     button.Position = UDim2.fromOffset(10, y)
-    button.Text = text
-    button.TextScaled = true
     button.BackgroundColor3 = Color3.fromRGB(65, 85, 150)
+    button.BorderSizePixel = 0
     button.TextColor3 = Color3.new(1, 1, 1)
+    button.TextSize = 14
+    button.Font = Enum.Font.GothamSemibold
+    button.Text = text
     button.Parent = frame
-    Instance.new("UICorner", button).CornerRadius =
-        UDim.new(0, 8)
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 8)
+    c.Parent = button
+
     button.Activated:Connect(function()
         callback(button)
     end)
+
     return button
 end
 
-makeButton("Speed Test: OFF", 48, function(button)
+makeButton("Speed Test: OFF", 52, function(button)
     speedEnabled = not speedEnabled
-    button.Text = speedEnabled and
-        "Speed Test: ON" or "Speed Test: OFF"
+    button.Text = speedEnabled and "Speed Test: ON"
+        or "Speed Test: OFF"
 
     local character = player.Character
     local humanoid = character and
         character:FindFirstChildOfClass("Humanoid")
 
     if humanoid then
-        -- Testet nur die normale Roblox-Laufgeschwindigkeit.
         humanoid.WalkSpeed = speedEnabled and 24 or 16
     end
 end)
 
-makeButton("Fly Test: OFF", 94, function(button)
-    flying = not flying
-    button.Text = flying and "Fly Test: ON" or "Fly Test: OFF"
+makeButton("Fly Test: OFF", 98, function(button)
+    flyTestEnabled = not flyTestEnabled
+    button.Text = flyTestEnabled and "Fly Test: ON"
+        or "Fly Test: OFF"
 
     if flyConnection then
         flyConnection:Disconnect()
         flyConnection = nil
     end
 
-    if flying then
+    if flyTestEnabled then
         flyConnection = RunService.Heartbeat:Connect(function()
             local character = player.Character
             local root = character and
                 character:FindFirstChild("HumanoidRootPart")
 
             if root then
-                -- Nur den Zustand anzeigen/testen;
-                -- keine Anti-Cheat-Umgehung.
-                title.Text = "Fly Test: " ..
-                    string.format("%.1f", root.Position.Y)
+                titleBar.Text = string.format(
+                    "Höhe: %.1f  |  Ziehen", root.Position.Y
+                )
             end
         end)
     else
-        title.Text = "Movement Test"
+        titleBar.Text = "Movement Test  |  Ziehen"
     end
 end)
 
-makeButton("Close GUI", 140, function()
+makeButton("Close GUI", 144, function()
     if flyConnection then
         flyConnection:Disconnect()
     end
+
     gui:Destroy()
 end)
