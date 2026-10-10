@@ -1,142 +1,53 @@
 
--- Movement Test GUI | LocalScript
--- Einfügen in StarterPlayer > StarterPlayerScripts
+-- Click to TP | LocalScript
+-- StarterPlayer > StarterPlayerScripts
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+local mouse = player:GetMouse()
 
-local oldGui = playerGui:FindFirstChild("MovementTestGUI")
-if oldGui then
-    oldGui:Destroy()
-end
+local enabled = true
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "MovementTestGUI"
+gui.Name = "ClickToTP"
 gui.ResetOnSpawn = false
-gui.Parent = playerGui
+gui.Parent = player:WaitForChild("PlayerGui")
 
-local frame = Instance.new("Frame")
-frame.Name = "MainFrame"
-frame.Size = UDim2.fromOffset(280, 220)
-frame.AnchorPoint = Vector2.new(0.5, 0.5)
-frame.Position = UDim2.new(0.5, 0, 0.5, 0)
-frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-frame.BorderSizePixel = 0
-frame.Parent = gui
+local button = Instance.new("TextButton")
+button.Size = UDim2.fromOffset(180, 45)
+button.Position = UDim2.new(0.5, -90, 0, 30)
+button.BackgroundColor3 = Color3.fromRGB(40, 150, 90)
+button.TextColor3 = Color3.new(1, 1, 1)
+button.TextSize = 16
+button.Font = Enum.Font.GothamBold
+button.Text = "Click TP: ON"
+button.Parent = gui
 
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 12)
-corner.Parent = frame
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent = button
 
--- Titelleiste
-local titleBar = Instance.new("TextButton")
-titleBar.Size = UDim2.new(1, 0, 0, 42)
-titleBar.BackgroundColor3 = Color3.fromRGB(55, 75, 140)
-titleBar.BorderSizePixel = 0
-titleBar.Text = "MOVEMENT TEST  |  ZIEHEN"
-titleBar.TextColor3 = Color3.new(1, 1, 1)
-titleBar.TextSize = 15
-titleBar.Font = Enum.Font.GothamBold
-titleBar.Parent = frame
-
-local titleCorner = Instance.new("UICorner")
-titleCorner.CornerRadius = UDim.new(0, 12)
-titleCorner.Parent = titleBar
-
--- GUI bewegen: Maus und Touch
-local dragging = false
-local dragStart
-local startPosition
-
-titleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-
-        dragging = true
-        dragStart = input.Position
-        startPosition = frame.Position
-    end
+button.Activated:Connect(function()
+    enabled = not enabled
+    button.Text = enabled and "Click TP: ON" or "Click TP: OFF"
+    button.BackgroundColor3 = enabled
+        and Color3.fromRGB(40, 150, 90)
+        or Color3.fromRGB(150, 60, 60)
 end)
 
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and (
-        input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch
-    ) then
-        local delta = input.Position - dragStart
-
-        frame.Position = UDim2.new(
-            startPosition.X.Scale,
-            startPosition.X.Offset + delta.X,
-            startPosition.Y.Scale,
-            startPosition.Y.Offset + delta.Y
-        )
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed or not enabled then return end
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1 then
+        return
     end
-end)
 
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
-    end
-end)
-
--- Buttons
-local function createButton(text, y, callback)
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(1, -20, 0, 40)
-    button.Position = UDim2.fromOffset(10, y)
-    button.BackgroundColor3 = Color3.fromRGB(65, 85, 150)
-    button.BorderSizePixel = 0
-    button.Text = text
-    button.TextColor3 = Color3.new(1, 1, 1)
-    button.TextSize = 15
-    button.Font = Enum.Font.GothamSemibold
-    button.Parent = frame
-
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, 8)
-    c.Parent = button
-
-    button.Activated:Connect(function()
-        callback(button)
-    end)
-end
-
--- Speed zwischen 16 und 300 umschalten
-createButton("SPEED: 300", 52, function(button)
     local character = player.Character
-    local humanoid = character and
-        character:FindFirstChildOfClass("Humanoid")
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    local target = mouse.Hit
 
-    if humanoid then
-        if humanoid.WalkSpeed == 300 then
-            humanoid.WalkSpeed = 16
-            button.Text = "SPEED: 16"
-        else
-            humanoid.WalkSpeed = 300
-            button.Text = "SPEED: 300"
-        end
+    if root and target then
+        root.CFrame = CFrame.new(target.Position + Vector3.new(0, 4, 0))
     end
-end)
-
--- Aktuelle Höhe anzeigen
-createButton("Höhe anzeigen", 100, function(button)
-    local character = player.Character
-    local root = character and
-        character:FindFirstChild("HumanoidRootPart")
-
-    if root then
-        button.Text = string.format("HÖHE: %.1f", root.Position.Y)
-    else
-        button.Text = "Kein Charakter"
-    end
-end)
-
--- GUI schließen
-createButton("GUI schließen", 148, function()
-    gui:Destroy()
 end)
