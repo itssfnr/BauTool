@@ -1,6 +1,6 @@
 
--- Movement Test GUI
--- LocalScript in StarterPlayerScripts
+-- Movement Test GUI | LocalScript
+-- Einfügen in StarterPlayer > StarterPlayerScripts
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -9,7 +9,9 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 local oldGui = playerGui:FindFirstChild("MovementTestGUI")
-if oldGui then oldGui:Destroy() end
+if oldGui then
+    oldGui:Destroy()
+end
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "MovementTestGUI"
@@ -18,7 +20,7 @@ gui.Parent = playerGui
 
 local frame = Instance.new("Frame")
 frame.Name = "MainFrame"
-frame.Size = UDim2.fromOffset(280, 210)
+frame.Size = UDim2.fromOffset(280, 220)
 frame.AnchorPoint = Vector2.new(0.5, 0.5)
 frame.Position = UDim2.new(0.5, 0, 0.5, 0)
 frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
@@ -30,26 +32,24 @@ corner.CornerRadius = UDim.new(0, 12)
 corner.Parent = frame
 
 -- Titelleiste
-local titleBar = Instance.new("TextLabel")
+local titleBar = Instance.new("TextButton")
 titleBar.Size = UDim2.new(1, 0, 0, 42)
 titleBar.BackgroundColor3 = Color3.fromRGB(55, 75, 140)
 titleBar.BorderSizePixel = 0
-titleBar.Text = "Movement Test  |  Ziehen"
+titleBar.Text = "MOVEMENT TEST  |  ZIEHEN"
 titleBar.TextColor3 = Color3.new(1, 1, 1)
-titleBar.TextSize = 16
+titleBar.TextSize = 15
 titleBar.Font = Enum.Font.GothamBold
-titleBar.Active = true
 titleBar.Parent = frame
 
 local titleCorner = Instance.new("UICorner")
 titleCorner.CornerRadius = UDim.new(0, 12)
 titleCorner.Parent = titleBar
 
--- Verschieben per Maus oder Touch
+-- GUI bewegen: Maus und Touch
 local dragging = false
 local dragStart
 local startPosition
-local dragInput
 
 titleBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
@@ -58,7 +58,6 @@ titleBar.InputBegan:Connect(function(input)
         dragging = true
         dragStart = input.Position
         startPosition = frame.Position
-        dragInput = input
     end
 end)
 
@@ -82,20 +81,19 @@ UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
         dragging = false
-        dragInput = nil
     end
 end)
 
 -- Buttons
 local function createButton(text, y, callback)
     local button = Instance.new("TextButton")
-    button.Size = UDim2.new(1, -20, 0, 38)
+    button.Size = UDim2.new(1, -20, 0, 40)
     button.Position = UDim2.fromOffset(10, y)
     button.BackgroundColor3 = Color3.fromRGB(65, 85, 150)
     button.BorderSizePixel = 0
     button.Text = text
     button.TextColor3 = Color3.new(1, 1, 1)
-    button.TextSize = 14
+    button.TextSize = 15
     button.Font = Enum.Font.GothamSemibold
     button.Parent = frame
 
@@ -108,30 +106,37 @@ local function createButton(text, y, callback)
     end)
 end
 
-createButton("Speed Test: 16", 52, function(button)
+-- Speed zwischen 16 und 300 umschalten
+createButton("SPEED: 300", 52, function(button)
     local character = player.Character
     local humanoid = character and
         character:FindFirstChildOfClass("Humanoid")
 
     if humanoid then
-        local newSpeed = humanoid.WalkSpeed == 16 and 24 or 16
-        humanoid.WalkSpeed = newSpeed
-        button.Text = "Speed Test: " .. newSpeed
+        if humanoid.WalkSpeed == 300 then
+            humanoid.WalkSpeed = 16
+            button.Text = "SPEED: 16"
+        else
+            humanoid.WalkSpeed = 300
+            button.Text = "SPEED: 300"
+        end
     end
 end)
 
-createButton("Höhe anzeigen", 98, function(button)
+-- Aktuelle Höhe anzeigen
+createButton("Höhe anzeigen", 100, function(button)
     local character = player.Character
     local root = character and
         character:FindFirstChild("HumanoidRootPart")
 
     if root then
-        button.Text = string.format("Höhe: %.1f", root.Position.Y)
+        button.Text = string.format("HÖHE: %.1f", root.Position.Y)
     else
         button.Text = "Kein Charakter"
     end
 end)
 
-createButton("GUI schließen", 144, function()
+-- GUI schließen
+createButton("GUI schließen", 148, function()
     gui:Destroy()
 end)
