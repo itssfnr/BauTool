@@ -1,16 +1,99 @@
+
+-- LocalScript
+-- Einfügen in StarterPlayer > StarterPlayerScripts
+
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
+local flying = false
+local speedEnabled = false
+local flyConnection
 
-local function flingSelf(power)
-    local character = player.Character
-    if not character then return end
+local gui = Instance.new("ScreenGui")
+gui.Name = "MovementTestGUI"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
 
-    local root = character:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+local frame = Instance.new("Frame")
+frame.Size = UDim2.fromOffset(240, 190)
+frame.Position = UDim2.new(0, 20, 0.5, -95)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+frame.Parent = gui
 
-    root.AssemblyLinearVelocity =
-        Vector3.new(1, 0.8, 1).Unit * power
+Instance.new("UICorner", frame).CornerRadius =
+    UDim.new(0, 12)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundTransparency = 1
+title.Text = "Movement Test"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.TextScaled = true
+title.Parent = frame
+
+local function makeButton(text, y, callback)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, -20, 0, 38)
+    button.Position = UDim2.fromOffset(10, y)
+    button.Text = text
+    button.TextScaled = true
+    button.BackgroundColor3 = Color3.fromRGB(65, 85, 150)
+    button.TextColor3 = Color3.new(1, 1, 1)
+    button.Parent = frame
+    Instance.new("UICorner", button).CornerRadius =
+        UDim.new(0, 8)
+    button.Activated:Connect(function()
+        callback(button)
+    end)
+    return button
 end
 
-flingSelf(150)
+makeButton("Speed Test: OFF", 48, function(button)
+    speedEnabled = not speedEnabled
+    button.Text = speedEnabled and
+        "Speed Test: ON" or "Speed Test: OFF"
+
+    local character = player.Character
+    local humanoid = character and
+        character:FindFirstChildOfClass("Humanoid")
+
+    if humanoid then
+        -- Testet nur die normale Roblox-Laufgeschwindigkeit.
+        humanoid.WalkSpeed = speedEnabled and 24 or 16
+    end
+end)
+
+makeButton("Fly Test: OFF", 94, function(button)
+    flying = not flying
+    button.Text = flying and "Fly Test: ON" or "Fly Test: OFF"
+
+    if flyConnection then
+        flyConnection:Disconnect()
+        flyConnection = nil
+    end
+
+    if flying then
+        flyConnection = RunService.Heartbeat:Connect(function()
+            local character = player.Character
+            local root = character and
+                character:FindFirstChild("HumanoidRootPart")
+
+            if root then
+                -- Nur den Zustand anzeigen/testen;
+                -- keine Anti-Cheat-Umgehung.
+                title.Text = "Fly Test: " ..
+                    string.format("%.1f", root.Position.Y)
+            end
+        end)
+    else
+        title.Text = "Movement Test"
+    end
+end)
+
+makeButton("Close GUI", 140, function()
+    if flyConnection then
+        flyConnection:Disconnect()
+    end
+    gui:Destroy()
+end)
