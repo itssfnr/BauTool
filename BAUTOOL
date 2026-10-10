@@ -1,53 +1,253 @@
 
--- Click to TP | LocalScript
--- StarterPlayer > StarterPlayerScripts
+-- Egg Hub V1 | Original GUI
+-- LocalScript in StarterPlayerScripts
 
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-
+local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
-local mouse = player:GetMouse()
-
-local enabled = true
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "ClickToTP"
+gui.Name = "EggHub"
 gui.ResetOnSpawn = false
+gui.DisplayOrder = 100
 gui.Parent = player:WaitForChild("PlayerGui")
 
-local button = Instance.new("TextButton")
-button.Size = UDim2.fromOffset(180, 45)
-button.Position = UDim2.new(0.5, -90, 0, 30)
-button.BackgroundColor3 = Color3.fromRGB(40, 150, 90)
-button.TextColor3 = Color3.new(1, 1, 1)
-button.TextSize = 16
-button.Font = Enum.Font.GothamBold
-button.Text = "Click TP: ON"
-button.Parent = gui
+local green = Color3.fromRGB(90, 255, 145)
+local bg = Color3.fromRGB(18, 20, 25)
+local panel = Color3.fromRGB(27, 30, 37)
+local white = Color3.fromRGB(240, 244, 250)
+local muted = Color3.fromRGB(155, 165, 180)
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 10)
-corner.Parent = button
+local main = Instance.new("Frame")
+main.Size = UDim2.fromOffset(530, 350)
+main.Position = UDim2.new(0.5, -265, 0.5, -175)
+main.BackgroundColor3 = bg
+main.BorderSizePixel = 0
+main.Parent = gui
 
-button.Activated:Connect(function()
-    enabled = not enabled
-    button.Text = enabled and "Click TP: ON" or "Click TP: OFF"
-    button.BackgroundColor3 = enabled
-        and Color3.fromRGB(40, 150, 90)
-        or Color3.fromRGB(150, 60, 60)
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 12)
+
+local stroke = Instance.new("UIStroke", main)
+stroke.Color = green
+stroke.Thickness = 1.4
+stroke.Transparency = 0.2
+
+local function label(parent, text, size, position, color)
+    local obj = Instance.new("TextLabel")
+    obj.BackgroundTransparency = 1
+    obj.Text = text
+    obj.TextSize = size
+    obj.Font = Enum.Font.GothamMedium
+    obj.TextColor3 = color or white
+    obj.Position = position
+    obj.Size = UDim2.new(1, 0, 0, 28)
+    obj.Parent = parent
+    return obj
+end
+
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 54)
+header.BackgroundColor3 = panel
+header.BorderSizePixel = 0
+header.Parent = main
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 12)
+
+label(header, "🥚  EGG HUB", 21, UDim2.fromOffset(16, 7), green)
+label(header, "V1.0  •  PERSONAL HUB", 10,
+    UDim2.fromOffset(18, 29), muted)
+
+local close = Instance.new("TextButton")
+close.Size = UDim2.fromOffset(34, 30)
+close.Position = UDim2.new(1, -44, 0, 12)
+close.BackgroundColor3 = Color3.fromRGB(170, 55, 65)
+close.Text = "X"
+close.TextColor3 = white
+close.TextSize = 15
+close.Font = Enum.Font.GothamBold
+close.Parent = header
+Instance.new("UICorner", close).CornerRadius = UDim.new(0, 7)
+
+close.MouseButton1Click:Connect(function()
+    gui:Destroy()
 end)
 
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed or not enabled then return end
-    if input.UserInputType ~= Enum.UserInputType.MouseButton1 then
-        return
-    end
+-- Bewegliches Fenster
+local dragging, dragStart, startPos
 
-    local character = player.Character
-    local root = character and character:FindFirstChild("HumanoidRootPart")
-    local target = mouse.Hit
-
-    if root and target then
-        root.CFrame = CFrame.new(target.Position + Vector3.new(0, 4, 0))
+header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = main.Position
     end
 end)
+
+header.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if dragging and (
+        input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch
+    ) then
+        local delta = input.Position - dragStart
+        main.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+local sidebar = Instance.new("Frame")
+sidebar.Position = UDim2.fromOffset(12, 67)
+sidebar.Size = UDim2.fromOffset(135, 270)
+sidebar.BackgroundColor3 = panel
+sidebar.BorderSizePixel = 0
+sidebar.Parent = main
+Instance.new("UICorner", sidebar).CornerRadius = UDim.new(0, 8)
+
+local content = Instance.new("Frame")
+content.Position = UDim2.fromOffset(158, 67)
+content.Size = UDim2.new(1, -170, 1, -80)
+content.BackgroundTransparency = 1
+content.Parent = main
+
+local function clearContent()
+    for _, child in ipairs(content:GetChildren()) do
+        child:Destroy()
+    end
+end
+
+local function makeButton(parent, text, y, callback)
+    local b = Instance.new("TextButton")
+    b.Position = UDim2.fromOffset(10, y)
+    b.Size = UDim2.new(1, -20, 0, 36)
+    b.BackgroundColor3 = panel
+    b.Text = text
+    b.TextColor3 = white
+    b.TextSize = 13
+    b.Font = Enum.Font.GothamMedium
+    b.Parent = parent
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 7)
+
+    b.MouseButton1Click:Connect(callback)
+    b.MouseEnter:Connect(function()
+        TweenService:Create(b, TweenInfo.new(0.12), {
+            BackgroundColor3 = Color3.fromRGB(48, 58, 52)
+        }):Play()
+    end)
+    b.MouseLeave:Connect(function()
+        TweenService:Create(b, TweenInfo.new(0.12), {
+            BackgroundColor3 = panel
+        }):Play()
+    end)
+    return b
+end
+
+local function showHome()
+    clearContent()
+    label(content, "Welcome back!", 22, UDim2.fromOffset(8, 8), green)
+    label(content, "Your personal Egg Hub.", 13,
+        UDim2.fromOffset(8, 40), muted)
+
+    local info = Instance.new("TextLabel")
+    info.Position = UDim2.fromOffset(8, 85)
+    info.Size = UDim2.new(1, -16, 0, 90)
+    info.BackgroundColor3 = panel
+    info.TextColor3 = white
+    info.TextSize = 14
+    info.Font = Enum.Font.Gotham
+    info.TextWrapped = true
+    info.Text = "Hub status: Ready\nPlayer: " .. player.Name ..
+        "\nVersion: 1.0"
+    info.Parent = content
+    Instance.new("UICorner", info).CornerRadius = UDim.new(0, 8)
+
+    label(content, "Choose a section on the left.", 12,
+        UDim2.fromOffset(8, 190), muted)
+end
+
+local function showPlayer()
+    clearContent()
+    label(content, "PLAYER INFO", 20, UDim2.fromOffset(8, 8), green)
+
+    local function refresh()
+        for _, c in ipairs(content:GetChildren()) do
+            if c.Name == "PlayerData" then c:Destroy() end
+        end
+
+        local character = player.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+
+        local data = Instance.new("TextLabel")
+        data.Name = "PlayerData"
+        data.Position = UDim2.fromOffset(8, 48)
+        data.Size = UDim2.new(1, -16, 0, 115)
+        data.BackgroundColor3 = panel
+        data.TextColor3 = white
+        data.TextSize = 14
+        data.Font = Enum.Font.Gotham
+        data.TextWrapped = true
+        data.TextXAlignment = Enum.TextXAlignment.Left
+        data.Text = "  Name: " .. player.Name ..
+            "\n  User ID: " .. player.UserId ..
+            "\n  Health: " .. (humanoid and math.floor(humanoid.Health) or 0) ..
+            "\n  WalkSpeed: " .. (humanoid and humanoid.WalkSpeed or 0) ..
+            "\n  Position: " .. (root and tostring(root.Position:ToVector3()) or "N/A")
+        data.Parent = content
+        Instance.new("UICorner", data).CornerRadius = UDim.new(0, 8)
+    end
+
+    makeButton(content, "Refresh player info", 180, refresh)
+    refresh()
+end
+
+local function showSettings()
+    clearContent()
+    label(content, "SETTINGS", 20, UDim2.fromOffset(8, 8), green)
+    label(content, "Customize your interface.", 13,
+        UDim2.fromOffset(8, 38), muted)
+
+    makeButton(content, "Hide / Show Hub", 80, function()
+        main.Visible = false
+
+        local reopen = Instance.new("TextButton")
+        reopen.Size = UDim2.fromOffset(120, 40)
+        reopen.Position = UDim2.new(0, 20, 0.5, 0)
+        reopen.BackgroundColor3 = bg
+        reopen.TextColor3 = green
+        reopen.Text = "Open Egg Hub"
+        reopen.TextSize = 14
+        reopen.Parent = gui
+        Instance.new("UICorner", reopen).CornerRadius = UDim.new(0, 8)
+
+        reopen.MouseButton1Click:Connect(function()
+            main.Visible = true
+            reopen:Destroy()
+        end)
+    end)
+
+    makeButton(content, "Green / Blue Theme", 128, function()
+        if stroke.Color == green then
+            stroke.Color = Color3.fromRGB(80, 170, 255)
+        else
+            stroke.Color = green
+        end
+    end)
+
+    makeButton(content, "Reset Window Position", 176, function()
+        main.Position = UDim2.new(0.5, -265, 0.5, -175)
+    end)
+end
+
+makeButton(sidebar, "⌂  Home", 12, showHome)
+makeButton(sidebar, "◉  Player Info", 56, showPlayer)
+makeButton(sidebar, "⚙  Settings", 100, showSettings)
+
+showHome()
