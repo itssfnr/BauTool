@@ -1,40 +1,38 @@
 
--- LocalScript
--- StarterPlayer > StarterPlayerScripts
+-- Movement Test GUI
+-- LocalScript in StarterPlayerScripts
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
-local speedEnabled = false
-local flyTestEnabled = false
-local flyConnection
-local dragConnection
+local playerGui = player:WaitForChild("PlayerGui")
+
+local oldGui = playerGui:FindFirstChild("MovementTestGUI")
+if oldGui then oldGui:Destroy() end
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "MovementTestGUI"
 gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Parent = playerGui
 
 local frame = Instance.new("Frame")
 frame.Name = "MainFrame"
-frame.Size = UDim2.fromOffset(260, 210)
-frame.Position = UDim2.new(0.5, -130, 0.5, -105)
+frame.Size = UDim2.fromOffset(280, 210)
+frame.AnchorPoint = Vector2.new(0.5, 0.5)
+frame.Position = UDim2.new(0.5, 0, 0.5, 0)
 frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 frame.BorderSizePixel = 0
-frame.Active = true
 frame.Parent = gui
 
 local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 12)
 corner.Parent = frame
 
--- Titelleiste zum Ziehen
-local titleBar = Instance.new("TextButton")
-titleBar.Name = "TitleBar"
+-- Titelleiste
+local titleBar = Instance.new("TextLabel")
 titleBar.Size = UDim2.new(1, 0, 0, 42)
-titleBar.BackgroundColor3 = Color3.fromRGB(45, 55, 90)
+titleBar.BackgroundColor3 = Color3.fromRGB(55, 75, 140)
 titleBar.BorderSizePixel = 0
 titleBar.Text = "Movement Test  |  Ziehen"
 titleBar.TextColor3 = Color3.new(1, 1, 1)
@@ -47,35 +45,28 @@ local titleCorner = Instance.new("UICorner")
 titleCorner.CornerRadius = UDim.new(0, 12)
 titleCorner.Parent = titleBar
 
--- GUI mit der Maus verschieben
+-- Verschieben per Maus oder Touch
 local dragging = false
 local dragStart
 local startPosition
-local activeInput
+local dragInput
 
 titleBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
+
         dragging = true
         dragStart = input.Position
         startPosition = frame.Position
-        activeInput = input
-
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-                activeInput = nil
-            end
-        end)
+        dragInput = input
     end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if not dragging then return end
-
-    if input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch then
-
+    if dragging and (
+        input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch
+    ) then
         local delta = input.Position - dragStart
 
         frame.Position = UDim2.new(
@@ -87,16 +78,25 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
-local function makeButton(text, y, callback)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+        dragInput = nil
+    end
+end)
+
+-- Buttons
+local function createButton(text, y, callback)
     local button = Instance.new("TextButton")
     button.Size = UDim2.new(1, -20, 0, 38)
     button.Position = UDim2.fromOffset(10, y)
     button.BackgroundColor3 = Color3.fromRGB(65, 85, 150)
     button.BorderSizePixel = 0
+    button.Text = text
     button.TextColor3 = Color3.new(1, 1, 1)
     button.TextSize = 14
     button.Font = Enum.Font.GothamSemibold
-    button.Text = text
     button.Parent = frame
 
     local c = Instance.new("UICorner")
@@ -106,55 +106,32 @@ local function makeButton(text, y, callback)
     button.Activated:Connect(function()
         callback(button)
     end)
-
-    return button
 end
 
-makeButton("Speed Test: OFF", 52, function(button)
-    speedEnabled = not speedEnabled
-    button.Text = speedEnabled and "Speed Test: ON"
-        or "Speed Test: OFF"
-
+createButton("Speed Test: 16", 52, function(button)
     local character = player.Character
     local humanoid = character and
         character:FindFirstChildOfClass("Humanoid")
 
     if humanoid then
-        humanoid.WalkSpeed = speedEnabled and 24 or 16
+        local newSpeed = humanoid.WalkSpeed == 16 and 24 or 16
+        humanoid.WalkSpeed = newSpeed
+        button.Text = "Speed Test: " .. newSpeed
     end
 end)
 
-makeButton("Fly Test: OFF", 98, function(button)
-    flyTestEnabled = not flyTestEnabled
-    button.Text = flyTestEnabled and "Fly Test: ON"
-        or "Fly Test: OFF"
+createButton("Höhe anzeigen", 98, function(button)
+    local character = player.Character
+    local root = character and
+        character:FindFirstChild("HumanoidRootPart")
 
-    if flyConnection then
-        flyConnection:Disconnect()
-        flyConnection = nil
-    end
-
-    if flyTestEnabled then
-        flyConnection = RunService.Heartbeat:Connect(function()
-            local character = player.Character
-            local root = character and
-                character:FindFirstChild("HumanoidRootPart")
-
-            if root then
-                titleBar.Text = string.format(
-                    "Höhe: %.1f  |  Ziehen", root.Position.Y
-                )
-            end
-        end)
+    if root then
+        button.Text = string.format("Höhe: %.1f", root.Position.Y)
     else
-        titleBar.Text = "Movement Test  |  Ziehen"
+        button.Text = "Kein Charakter"
     end
 end)
 
-makeButton("Close GUI", 144, function()
-    if flyConnection then
-        flyConnection:Disconnect()
-    end
-
+createButton("GUI schließen", 144, function()
     gui:Destroy()
 end)
